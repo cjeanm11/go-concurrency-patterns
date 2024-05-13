@@ -13,6 +13,7 @@ type TaskCommand interface {
 type Task struct {
 	execute func()
 }
+
 func NewTask(execute func()) Task {
     return Task{execute: execute}
 }

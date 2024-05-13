@@ -2,52 +2,80 @@ package main
 
 import (
 	"fmt"
-	wp "patterns/libs/worker-pool"
+	future "patterns/libs/future"
+	pool "patterns/libs/pool"
 	"time"
 )
 
-type Worker struct {
-	ID   int
-	Desc string
-	Sum  *int
+type Task struct {
+	ID int
 }
 
-func taskForItem(task Worker) {
-	fmt.Printf("Processing task %d: %s\n", task.ID, task.Desc)
-}
 
-func task1Execution(item *Worker) {
-	item.ID += 100
+func (w *Task) execute() {
+	w.ID += 100
 	fmt.Println("Executing task 1...")
 	delay := 5 * time.Second
 	fmt.Printf("Waiting for %s before executing tasks...\n", delay)
 	time.Sleep(delay)
 }
 
-func task2Execution(item *Worker) {
-	item.ID += 100
-	fmt.Println("Executing task 2...")
-	delay := 2 * time.Second
-	fmt.Printf("Waiting for %s before executing tasks...\n", delay)
-	time.Sleep(delay)
+
+type Future struct {
+	ID int
 }
 
+func (w *Future) execute() int {
+	w.ID += 100
+	fmt.Println("Executing task 1...")
+	delay := 5 * time.Second
+	fmt.Printf("Waiting for %s before executing tasks...\n", delay)
+	time.Sleep(delay)
+	return 1
+}
+
+
+
 func main() {
+
+	//////////////////////////////////////////////////////////////////////////////////
+
 	// Worker-pool
-	var taskItems []Worker
+	var taskItems []Task
 
 	for i := 0; i < 10; i++ {
-		taskItems = append(taskItems, Worker{ID: i, Desc: fmt.Sprintf("Task %d", i)})
+		taskItems = append(taskItems, Task{ID: i})
 	}
 
-	task1 := wp.NewTask(func() {
-		task1Execution(&taskItems[0])
+	task1 := pool.NewTask(taskItems[0].execute)
+	task2 := pool.NewTask(taskItems[1].execute)
+
+	task3 := pool.NewTask(func(){
+		fmt.Println("Executing task 3...")
 	})
 
-	task2 := wp.NewTask(func() {
-		task2Execution(&taskItems[1])
-	})
+	pool.ProcessTasks(10, []pool.Task{task1, task2, task3})
 
-	wp.ProcessTasks(10, []wp.Task{task1, task2})
-	wp.ProcessItems(2, taskItems, taskForItem)
+
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Futures
+	var futures []Future
+	for i := 0; i < 10; i++ {
+		futures = append(futures, Future{ID: i})
+	}
+	future1 := future.NewFuture(futures[0].execute)
+	future1.Submit()
+
+	future2 := future.NewFuture(futures[1].execute)
+	future2.Submit()
+
+	future2.Submit()
+	result := future1.Get()
+
+	fmt.Println(result)
+
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Futures
 }
