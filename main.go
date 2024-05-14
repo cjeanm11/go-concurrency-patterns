@@ -3,23 +3,32 @@ package main
 import (
 	"fmt"
 	future "patterns/libs/future"
-	pool "patterns/libs/pool"
+	p "patterns/libs/pipeline"
+	pool "patterns/libs/workerpool"
 	"time"
 )
+
+//////////////////////////////////////////////////////////////////////////////////
+
+// Worker Pool
 
 type Task struct {
 	ID int
 }
 
-
-func (w *Task) execute() {
+func (w *Task) execute() any {
 	w.ID += 100
 	fmt.Println("Executing task 1...")
 	delay := 5 * time.Second
 	fmt.Printf("Waiting for %s before executing tasks...\n", delay)
 	time.Sleep(delay)
+	return 1
 }
 
+
+//////////////////////////////////////////////////////////////////////////////////
+
+// Future
 
 type Future struct {
 	ID int
@@ -34,32 +43,47 @@ func (w *Future) execute() int {
 	return 1
 }
 
+//////////////////////////////////////////////////////////////////////////////////
 
+
+
+
+func execute1(data any) any {
+	return data.(int) * 2
+}
+
+func execute2(data any) any {
+	return data.(int) + 1
+}
+
+func execute3(data any) any {
+	return data.(int) * data.(int)
+}
 
 func main() {
 
 	//////////////////////////////////////////////////////////////////////////////////
 
-	// Worker-pool
-	var taskItems []Task
+	// Worker Pool
 
+	var taskItems []Task
 	for i := 0; i < 10; i++ {
 		taskItems = append(taskItems, Task{ID: i})
 	}
 
-	task1 := pool.NewTask(taskItems[0].execute)
-	task2 := pool.NewTask(taskItems[1].execute)
+	var itemFuncs []func() any
+	for _, item := range taskItems {
+		itemFuncs = append(itemFuncs, item.execute)
+	}
 
-	task3 := pool.NewTask(func(){
-		fmt.Println("Executing task 3...")
-	})
+	result := pool.ProcessTasks(10, itemFuncs)
 
-	pool.ProcessTasks(10, []pool.Task{task1, task2, task3})
-
-
+	fmt.Print("Worker pool :")
+	fmt.Println(result...)
 	//////////////////////////////////////////////////////////////////////////////////
 
-	// Futures
+	// Completable Futures
+
 	var futures []Future
 	for i := 0; i < 10; i++ {
 		futures = append(futures, Future{ID: i})
@@ -69,13 +93,34 @@ func main() {
 
 	future2 := future.NewFuture(futures[1].execute)
 	future2.Submit()
+	
+	future3 := future.NewFuture(futures[2].execute)
+	future3.Submit()
 
-	future2.Submit()
-	result := future1.Get()
+	result2 := future2.Get()
+	result3 := future3.Get()
+	result1 := future1.Get()
 
-	fmt.Println(result)
-
+	fmt.Println("Future result: ", result1 + result2 + result3)
 	//////////////////////////////////////////////////////////////////////////////////
 
-	// Futures
+	// Pipeline  
+
+	builder := p.NewPipelineBuilder()
+	builder.AddStage(execute1)
+	builder.AddStage(execute2)
+	builder.AddStage(execute3)
+	pipeline := builder.Build()
+
+	in := make(chan interface{})
+	go func() {
+		defer close(in)
+		for _, n := range []int{1, 4} {
+			in <- n
+		}
+	}()
+
+	for result := range p.ExecutePipeline(in, pipeline) {
+		fmt.Println("Pipeline result: ", result)
+	}
 }
