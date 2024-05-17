@@ -1,4 +1,4 @@
-package taskmanager
+package workerpool
 
 import (
 	"sync"
@@ -22,7 +22,7 @@ func (t Task[T]) invoke() interface{} {
 	return t.execute()
 }
 
-func ProcessTasks(numWorkers int, tasks []func() interface{}) []interface{} {
+func ProcessTasks(numWorkers int, tasks []func() any) []any {
 	var wg sync.WaitGroup
 	taskChannel := make(chan func() interface{}, len(tasks))
 	resultChannel := make(chan interface{}, len(tasks))

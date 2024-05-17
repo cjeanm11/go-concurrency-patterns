@@ -9,6 +9,8 @@ type Future[T any] struct {
 	result  chan T
 }
 
+type Task[T any] func() T
+
 func NewFuture[T any](execute func() T) Future[T] {
 	return Future[T]{
 		execute: execute,

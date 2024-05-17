@@ -6,6 +6,8 @@ type Pipeline struct {
 
 type Stage func(in <-chan any) <-chan any
 
+type Task func(any) any
+
 func NewStage(process func(any) any) Stage {
 	return func(in <-chan any) <-chan any {
 		out := make(chan any)
@@ -19,7 +21,7 @@ func NewStage(process func(any) any) Stage {
 	}
 }
 
-func (pb *Pipeline) AddStage(process func(any) any) {
+func (pb *Pipeline) AddStage(process Task) {
 	stage := NewStage(process)
 	pb.stages = append(pb.stages, stage)
 }
