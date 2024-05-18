@@ -5,6 +5,7 @@ import (
 	fanin "patterns/libs/fanin"
 	future "patterns/libs/future"
 	p "patterns/libs/pipeline"
+	"patterns/libs/takefirstn"
 	pool "patterns/libs/workerpool"
 	"time"
 )
@@ -59,10 +60,11 @@ func execute3(data any) any {
 
 //////////////////////////////////////////////////////////////////////////////////func sendData(ch chan<- int, start, end int) {
 
-func sendData(ch chan<- int, start, end int) {
+func sendData(ch chan<- any, start, end int) {
 	defer close(ch)
-	for i := start; i < end; i++ {
-		ch <- i
+	for i := start; i <= end; i++ {
+		index := i
+		ch <- index
 		time.Sleep(time.Millisecond * 500)
 	}
 }
@@ -134,23 +136,16 @@ func main() {
 
 	// Fan-in
 
-	ch1 := make(chan int)
-	ch2 := make(chan int)
-	
+	ch1 := make(chan any)
+	ch2 := make(chan any)
 	f := fanin.NewFanIn()
-	
 	go sendData(ch1, 0, 5)
 	go sendData(ch2, 5, 10)
-	
-	f.AddInputChannel(ch1)
-	f.AddInputChannel(ch2)
-	
+	f.AddInputChannels(ch1, ch2)
 	f.Start()
-	
-	merged := f.MergedChannel()
-	
-	for val := range merged {
-		fmt.Println("Merged:", val)
+	for val := range f.MergedChannel() {
+		println("Merged", val.(int))
 	}
-	
+
+
 }
