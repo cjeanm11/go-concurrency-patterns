@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	fanin "patterns/libs/fanin"
 	future "patterns/libs/future"
 	p "patterns/libs/pipeline"
 	pool "patterns/libs/workerpool"
@@ -25,7 +26,6 @@ func (w *Task) execute() any {
 	return 1
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////
 
 // Future
@@ -45,9 +45,6 @@ func (w *Future) execute() int {
 
 //////////////////////////////////////////////////////////////////////////////////
 
-
-
-
 func execute1(data any) any {
 	return data.(int) * 2
 }
@@ -58,6 +55,16 @@ func execute2(data any) any {
 
 func execute3(data any) any {
 	return data.(int) * data.(int)
+}
+
+//////////////////////////////////////////////////////////////////////////////////func sendData(ch chan<- int, start, end int) {
+
+func sendData(ch chan<- int, start, end int) {
+	defer close(ch)
+	for i := start; i < end; i++ {
+		ch <- i
+		time.Sleep(time.Millisecond * 500)
+	}
 }
 
 func main() {
@@ -93,7 +100,7 @@ func main() {
 
 	future2 := future.NewFuture(futures[1].execute)
 	future2.Submit()
-	
+
 	future3 := future.NewFuture(futures[2].execute)
 	future3.Submit()
 
@@ -101,10 +108,10 @@ func main() {
 	result3 := future3.Get()
 	result1 := future1.Get()
 
-	fmt.Println("Future result: ", result1 + result2 + result3)
+	fmt.Println("Future result: ", result1+result2+result3)
 	//////////////////////////////////////////////////////////////////////////////////
 
-	// Pipeline  
+	// Pipeline
 
 	builder := p.NewPipelineBuilder()
 	builder.AddStage(execute1)
@@ -123,4 +130,27 @@ func main() {
 	for result := range p.ExecutePipeline(in, pipeline) {
 		fmt.Println("Pipeline result: ", result)
 	}
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Fan-in
+
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+	
+	f := fanin.NewFanIn()
+	
+	go sendData(ch1, 0, 5)
+	go sendData(ch2, 5, 10)
+	
+	f.AddInputChannel(ch1)
+	f.AddInputChannel(ch2)
+	
+	f.Start()
+	
+	merged := f.MergedChannel()
+	
+	for val := range merged {
+		fmt.Println("Merged:", val)
+	}
+	
 }
