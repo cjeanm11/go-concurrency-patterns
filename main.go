@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	fanin "patterns/libs/fanin"
-	future "patterns/libs/future"
-	p "patterns/libs/pipeline"
-	"patterns/libs/takefirstn"
-	pool "patterns/libs/workerpool"
+	fanin "patterns/fanin"
+	future "patterns/future"
+	p "patterns/pipeline"
+	pool "patterns/workerpool"
 	"time"
 )
 
@@ -146,6 +145,5 @@ func main() {
 	for val := range f.MergedChannel() {
 		println("Merged", val.(int))
 	}
-
 
 }
